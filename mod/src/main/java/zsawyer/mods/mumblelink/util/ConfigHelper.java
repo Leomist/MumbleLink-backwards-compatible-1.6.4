@@ -22,7 +22,6 @@
 
 package zsawyer.mods.mumblelink.util;
 
-import java.rmi.activation.Activatable;
 import java.util.Arrays;
 
 import net.minecraftforge.common.Configuration;
@@ -106,7 +105,7 @@ public class ConfigHelper {
 
 	/**
 	 * shorthand for getting the "enabled" boolean usually used inconjunction
-	 * with {@link Activatable}
+	 * with activatable addons
 	 * 
 	 * @param defaultValue
 	 *            a default value to use if it wasn't set yet
@@ -126,7 +125,7 @@ public class ConfigHelper {
 	 */
 	public boolean loadDebug(boolean defaultValue) {
 		return loadBoolean(Config.Key.debug.toString(),
-				"whether to turn on debuggin (extended logging)", defaultValue);
+				"whether to turn on debugging (extended logging)", defaultValue);
 	}
 
 	/**

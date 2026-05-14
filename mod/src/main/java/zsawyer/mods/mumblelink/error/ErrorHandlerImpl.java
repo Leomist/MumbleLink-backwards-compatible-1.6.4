@@ -94,7 +94,7 @@ public class ErrorHandlerImpl implements ModErrorHandler, NativeInitErrorHandler
     public static ErrorHandlerImpl getInstance() {
         try {
             return SingletonFactory.getInstance(ErrorHandlerImpl.class);
-        }  catch (Exception ex) {
+        } catch (Exception ex) {
             // nothing we can do
             throw new RuntimeException(ex);
         }
