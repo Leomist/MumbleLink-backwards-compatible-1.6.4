@@ -51,7 +51,6 @@ import cpw.mods.fml.relauncher.SideOnly;
 @Mod(modid = MumbleLinkConstants.MOD_ID, name = MumbleLinkConstants.MOD_NAME,
 		version = MumbleLinkConstants.MOD_VERSION)
 @NetworkMod(clientSideRequired = true, serverSideRequired = false)
-@SideOnly(Side.CLIENT)
 public class MumbleLink extends MumbleLinkBase implements Activateable,
 		Debuggable {
 	public static Logger LOG;

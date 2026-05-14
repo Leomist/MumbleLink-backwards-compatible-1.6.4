@@ -78,7 +78,6 @@ import cpw.mods.fml.relauncher.SideOnly;
 		version = ExtendedPASupportConstants.MOD_VERSION,
 		dependencies = "required-after:" + MumbleLinkConstants.MOD_ID)
 @NetworkMod(clientSideRequired = true, serverSideRequired = false)
-@SideOnly(Side.CLIENT)
 public class ExtendedPASupport implements Activateable, IdentityManipulator {
 	public static Logger LOG;
 
