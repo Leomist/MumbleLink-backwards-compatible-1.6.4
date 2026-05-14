@@ -28,6 +28,7 @@ import zsawyer.mods.mumblelink.error.ModErrorHandler.ModError;
 import zsawyer.mods.mumblelink.loader.PackageLibraryLoader;
 import zsawyer.mods.mumblelink.mumble.MumbleInitializer;
 import zsawyer.mods.mumblelink.mumble.UpdateData;
+import zsawyer.mods.mumblelink.util.MinecraftProxy;
 import zsawyer.mumble.jna.LinkAPILibrary;
 
 /**
@@ -74,7 +75,8 @@ public class MumbleLinkBase {
 
 	public void tryUpdateMumble(Minecraft game) {
 		if (mumbleInititer.isMumbleInitialized()) {
-			if (game.thePlayer != null && game.theWorld != null) {
+			MinecraftProxy proxy = new MinecraftProxy(game);
+			if (proxy.getPlayer() != null && proxy.getWorld() != null) {
 				mumbleData.set(game);
 				mumbleData.send();
 			}
