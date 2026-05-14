@@ -1,125 +1,62 @@
 buildscript {
     repositories {
-        maven { url = 'https://maven.minecraftforge.net' }
         mavenCentral()
+        maven {
+            name = 'forge'
+            url = 'http://files.minecraftforge.net/maven'
+        }
+        maven {
+            name = 'sonatype'
+            url = 'https://oss.sonatype.org/content/repositories/snapshots/'
+        }
     }
     dependencies {
-        classpath group: 'net.minecraftforge.gradle', name: 'ForgeGradle', version: '5.1.+', changing: true
+        classpath 'net.minecraftforge.gradle:ForgeGradle:1.1-SNAPSHOT'
     }
 }
 
-repositories {
-    maven { url = 'https://maven.minecraftforge.net' }
-    jcenter()
-    mavenCentral()
-}
+apply plugin: 'forge'
 
-apply plugin: 'net.minecraftforge.gradle'
-apply plugin: 'idea'
-apply plugin: 'maven-publish'
+version = '4.0.4'
+group = 'zsawyer.mods.mumblelink'
+archivesBaseName = 'mumblelink'
+sourceCompatibility = '1.6'
+targetCompatibility = '1.6'
+ext.mcversion = '1.6.4'
+ext.forgeversion = '9.11.0.897'
 
-ext.modversion              = "5.1.0"
-ext.mcversion               = "1.17.1"
-ext.forgeversion_dependency = "37"
-ext.forgeversion            = "37.0.43"
-
-version = mcversion + "-" + modversion
-group = "zsawyer.mods.mumblelink.MumbleLink"
-archivesBaseName = "mumblelink"
-ext.vendorName = "zsawyer." + archivesBaseName
-
-java.toolchain.languageVersion = JavaLanguageVersion.of(16)
-
-println('Java: ' + System.getProperty('java.version') + ' JVM: ' + System.getProperty('java.vm.version') + '(' + System.getProperty('java.vendor') + ') Arch: ' + System.getProperty('os.arch'))
 minecraft {
-    mappings channel: 'official', version: mcversion
-
-    runs {
-        client {
-            workingDirectory project.file('run')
-
-            property 'forge.logging.markers', 'SCAN,REGISTRIES,REGISTRYDUMP'
-
-            property 'forge.logging.console.level', 'debug'
-
-            mods {
-                archivesBaseName {
-                    source sourceSets.main
-                }
-            }
-        }
-
-        server {
-            workingDirectory project.file('run')
-
-            property 'forge.logging.markers', 'SCAN,REGISTRIES,REGISTRYDUMP'
-
-            property 'forge.logging.console.level', 'debug'
-
-            mods {
-                archivesBaseName {
-                    source sourceSets.main
-                }
-            }
-        }
-
-        data {
-            workingDirectory project.file('run')
-
-            property 'forge.logging.markers', 'SCAN,REGISTRIES,REGISTRYDUMP'
-
-            property 'forge.logging.console.level', 'debug'
-
-            mods {
-                archivesBaseName {
-                    source sourceSets.main
-                }
-            }
-        }
-    }
-}
-
-sourceSets.main.resources { srcDir 'src/generated/resources' }
-dependencies {
-    minecraft 'net.minecraftforge:forge:' + mcversion + '-' + forgeversion
-}
-
-jar {
-    manifest {
-        attributes([
-            "Specification-Title"     : project.name,
-            "Specification-Vendor"    : "${vendorName}",
-            "Specification-Version"   : "${version}",
-            "Implementation-Title"    : project.name,
-            "Implementation-Version"  : "${version}",
-            "Implementation-Vendor"   : "${vendorName}",
-            "Implementation-Timestamp": new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
-        ])
-    }
+    version = mcversion + '-' + forgeversion
+    assetDir = 'eclipse/assets'
 }
 
 processResources {
-    filesMatching(['**/mods.toml', '**/README.txt']) {
-        expand 'version': version,
-                'modversion': modversion,
+    from(sourceSets.main.resources.srcDirs) {
+        include '**/*.lang'
+        include '**/*.info'
+        include '**/*.txt'
+        expand 'version': project.version,
                 'mcversion': mcversion,
-                'forgeversion': forgeversion,
-                'forgeversion_dependency': forgeversion_dependency,
                 'date': new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
+    }
+
+    from(sourceSets.main.resources.srcDirs) {
+        exclude '**/*.lang'
+        exclude '**/*.info'
+        exclude '**/*.txt'
     }
 }
 
-jar.finalizedBy('reobfJar')
+configurations {
+    includeInJar
+}
 
-publishing {
-    publications {
-        mavenJava(MavenPublication) {
-            artifact jar
-        }
-    }
-    repositories {
-        maven {
-            url "file://${project.projectDir}/mcmodsrepo"
-        }
-    }
+dependencies {
+    includeInJar 'net.java.dev.jna:jna:4.0.0'
+    compile configurations.includeInJar
+}
+
+jar {
+    from zipTree(configurations.includeInJar.singleFile)
+    from zipTree('jars/natives.jar')
 }

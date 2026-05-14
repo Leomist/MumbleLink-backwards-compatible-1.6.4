@@ -22,36 +22,35 @@
 
 package zsawyer.mods.mumblelink.api;
 
-import javax.annotation.Nonnull;
+import zsawyer.mods.mumblelink.mumble.ContextManipulator;
+import zsawyer.mods.mumblelink.mumble.ExtendedUpdateData;
+import zsawyer.mods.mumblelink.mumble.IdentityManipulator;
 
-/**
- * Interface for the MumbleLink mod.
- * This interface provides implementation independent access to the MumbleLink mod.
- * <p>
- * Use {@link zsawyer.mods.mumblelink.util.InstanceHelper#getMumbleLink()} to retrieve the mod instance.
- */
-public interface MumbleLink extends Activateable, Debuggable {
-    public final static @Nonnull String MOD_ID = "mumblelink";
+public class MumbleLinkAPIInstance implements MumbleLinkAPI {
 
-    /**
-     * the API instance which is used by this mod instance
-     * registering at this api effectively registers your manipulators with the core MumbleLink mod
-     *
-     * @return mod's API instance
-     */
-    public MumbleLinkAPI getApi();
+	private ExtendedUpdateData extendedUpdateData;
 
-    /**
-     * display name of the mod
-     *
-     * @return mod's name
-     */
-    public String getName();
+	public void setExtendedUpdateData(ExtendedUpdateData extendedUpdateData) {
+		this.extendedUpdateData = extendedUpdateData;
+	}
 
-    /**
-     * version of the mod
-     *
-     * @return mod's version
-     */
-    public String getVersion();
+	@Override
+	public void register(IdentityManipulator manipulator) {
+		extendedUpdateData.register(manipulator);
+	}
+
+	@Override
+	public void unregister(IdentityManipulator manipulator) {
+		extendedUpdateData.unregister(manipulator);
+	}
+
+	@Override
+	public void register(ContextManipulator manipulator) {
+		extendedUpdateData.register(manipulator);
+	}
+
+	@Override
+	public void unregister(ContextManipulator manipulator) {
+		extendedUpdateData.unregister(manipulator);
+	}
 }

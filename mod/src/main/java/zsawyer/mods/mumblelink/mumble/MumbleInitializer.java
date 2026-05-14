@@ -21,34 +21,29 @@
  */
 package zsawyer.mods.mumblelink.mumble;
 
-import net.minecraft.client.Minecraft;
 import zsawyer.mods.mumblelink.error.NativeInitErrorHandler;
 import zsawyer.mods.mumblelink.error.NativeInitErrorHandler.NativeInitError;
 import zsawyer.mods.mumblelink.mumble.jna.LinkAPIHelper;
 import zsawyer.mumble.jna.LinkAPILibrary;
 
-import java.util.function.Consumer;
-
 /**
+ *
  * @author zsawyer
  */
 public class MumbleInitializer implements Runnable {
 
-    public static final int ONE_SECOND = 1000;
     private LinkAPIHelper link;
     private NativeInitErrorHandler errorHandler;
-    private Consumer<Minecraft> gameSetter;
     private NativeInitError initilizationReturnCode = NativeInitError.NOT_YET_INITIALIZED;
-
+    
     public static final String PLUGIN_NAME = "Minecraft";
-    public static final String PLUGIN_DESCRIPTION = "Minecraft (1.16.5)";
+    public static final String PLUGIN_DESCRIPTION = "Link plugin for Minecraft with ModLoader";
     public static final int PLUGIN_UI_VERSION = 2;
 
-    public MumbleInitializer(LinkAPILibrary link, NativeInitErrorHandler errorHandler, Consumer<Minecraft> gameSetter) {
+    public MumbleInitializer(LinkAPILibrary link, NativeInitErrorHandler errorHandler) {
         super();
         this.link = new LinkAPIHelper(link);
         this.errorHandler = errorHandler;
-        this.gameSetter = gameSetter;
     }
 
     @Override
@@ -57,31 +52,10 @@ public class MumbleInitializer implements Runnable {
             if (Thread.interrupted()) {
                 return;
             }
-
-            synchronized (gameSetter) {
-                try {
-                    gameSetter.accept(Minecraft.getInstance());
-                } catch (Exception e) {
-                    // nothing to do here... we'll just wait a bit and retry when we can  actually get the instance properly
-                    try {
-                        Thread.sleep(ONE_SECOND);
-                        break;
-                    } catch (InterruptedException ie) {
-                        return;
-                    }
-                }
-            }
-
             synchronized (link) {
                 initilizationReturnCode = link.initialize(PLUGIN_NAME, PLUGIN_DESCRIPTION, PLUGIN_UI_VERSION);
 
                 errorHandler.handleError(initilizationReturnCode);
-
-                try {
-                    Thread.sleep(ONE_SECOND);
-                } catch (InterruptedException e) {
-                    return;
-                }
             }
         }
     }

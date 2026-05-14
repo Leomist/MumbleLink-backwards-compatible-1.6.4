@@ -1,6 +1,6 @@
 /*
  mod_MumbleLink - Positional Audio Communication for Minecraft with Mumble
- Copyright 2012 zsawyer (http://sourceforge.net/users/zsawyer)
+ Copyright 2011-2013 zsawyer (http://sourceforge.net/users/zsawyer)
 
  This file is part of mod_MumbleLink
  (http://sourceforge.net/projects/modmumblelink/).
@@ -19,36 +19,27 @@
  along with mod_MumbleLink.  If not, see <http://www.gnu.org/licenses/>.
 
  */
-package zsawyer.mods.mumblelink.error;
 
+package zsawyer.mods;
 
 /**
- *
+ * A class implementing this interface can be told to suspend its activities.
+ * The class will not unload nor will it guarantee to stop monitoring if it is
+ * subscribed anywhere.
+ * 
  * @author zsawyer
+ * 
  */
-public interface ModErrorHandler {
+public interface Activateable {
 
-    public enum ModError {
+	/**
+	 * enable all major activities both initially and subsequently to
+	 * intermissions
+	 */
+	public abstract void activate();
 
-        CONFIG_FILE_READ("Config not loaded! Check file permissions."),
-        CONFIG_FILE_SYNTAX("Unrecognized key or value in config file."),
-        CONFIG_FILE_INVALID_VALUE("Value in config file is invalid."),
-        LIBRARY_LOAD_FAILED("Couldn't load library.");
-        private String message;
-
-        private ModError(String message) {
-            this.message = message;
-        }
-
-        @Override
-        public String toString() {
-            return message;
-        }
-    }
-
-   
-
-    void handleError(ModError err, Throwable stack);
-
-    void throwError(ModError modError, Throwable err);
+	/**
+	 * suspend all major activities
+	 */
+	public abstract void deactivate();
 }

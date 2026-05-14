@@ -20,25 +20,8 @@
 
  */
 
-package zsawyer.mods.mumblelink.api;
+package zsawyer.mods;
 
-/**
- * A class implementing this interface can be told to suspend its activities.
- * The class will not unload nor will it guarantee to stop monitoring if it is
- * subscribed anywhere.
- *
- * @author zsawyer
- */
-public interface Activateable {
-
-    /**
-     * enable all major activities both initially and subsequently to
-     * intermissions
-     */
-    public abstract void activate();
-
-    /**
-     * suspend all major activities
-     */
-    public abstract void deactivate();
+public interface Debuggable {
+	public boolean debugging();
 }

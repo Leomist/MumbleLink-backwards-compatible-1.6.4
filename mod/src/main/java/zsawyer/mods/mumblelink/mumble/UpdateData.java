@@ -21,183 +21,220 @@
  */
 package zsawyer.mods.mumblelink.mumble;
 
+import java.util.logging.Level;
+
 import net.minecraft.client.Minecraft;
-import net.minecraft.world.phys.Vec3;
-import zsawyer.mods.mumblelink.MumbleLinkImpl;
-import zsawyer.mods.mumblelink.api.IdentityManipulator;
+import net.minecraft.src.ModLoader;
+import net.minecraft.util.MathHelper;
+import net.minecraft.util.Vec3;
+import zsawyer.mods.mumblelink.MumbleLinkConstants;
+import zsawyer.mods.mumblelink.addons.pa.es.ExtendedPASupportConstants.ContextKey;
+import zsawyer.mods.mumblelink.addons.pa.es.ExtendedPASupportConstants.IdentityKey;
 import zsawyer.mods.mumblelink.error.NativeUpdateErrorHandler;
 import zsawyer.mods.mumblelink.error.NativeUpdateErrorHandler.NativeUpdateError;
+import zsawyer.mods.mumblelink.json.JSONException;
+import zsawyer.mods.mumblelink.json.JSONObject;
 import zsawyer.mods.mumblelink.mumble.jna.LinkAPIHelper;
-import zsawyer.mods.mumblelink.util.json.JSONException;
-import zsawyer.mods.mumblelink.util.json.JSONObject;
 import zsawyer.mumble.jna.LinkAPILibrary;
 
 /**
+ * 
  * @author zsawyer
  */
 public class UpdateData {
 
-    float[] fAvatarPosition = {0, 0, 0}; // [3]
-    float[] fAvatarFront = {0, 0, 0}; // [3]
-    float[] fAvatarTop = {0, 0, 0}; // [3]
-    String name = ""; // [256]
-    String description = ""; // [2048]
-    float[] fCameraPosition = {0, 0, 0}; // [3]
-    float[] fCameraFront = {0, 0, 0}; // [3]
-    float[] fCameraTop = {0, 0, 0}; // [3]
-    String identity = ""; // [256]
-    String context = ""; // [256]
-    LinkAPILibrary mumbleLink;
-    NativeUpdateErrorHandler errorHandler;
-    private int uiTick = 0;
+	float[] fAvatarPosition = { 0, 0, 0 }; // [3]
+	float[] fAvatarFront = { 0, 0, 0 }; // [3]
+	float[] fAvatarTop = { 0, 0, 0 }; // [3]
+	String name = ""; // [256]
+	String description = ""; // [2048]
+	float[] fCameraPosition = { 0, 0, 0 }; // [3]
+	float[] fCameraFront = { 0, 0, 0 }; // [3]
+	float[] fCameraTop = { 0, 0, 0 }; // [3]
+	String identity = ""; // [256]
+	String context = ""; // [256]
+	LinkAPILibrary mumbleLink;
+	NativeUpdateErrorHandler errorHandler;
+	private int uiTick = 0;
 
-    public UpdateData(LinkAPILibrary mumbleLink,
-                      NativeUpdateErrorHandler errorHandler) {
-        this.mumbleLink = mumbleLink;
-        this.errorHandler = errorHandler;
+	public UpdateData(LinkAPILibrary mumbleLink,
+			NativeUpdateErrorHandler errorHandler) {
+		this.mumbleLink = mumbleLink;
+		this.errorHandler = errorHandler;
 
-        name = MumbleInitializer.PLUGIN_NAME;
-        description = MumbleInitializer.PLUGIN_DESCRIPTION;
-    }
+		name = MumbleInitializer.PLUGIN_NAME;
+		description = MumbleInitializer.PLUGIN_DESCRIPTION;
+	}
 
-    public void send() {
-        LinkAPILibrary.LinkedMem lm = new LinkAPILibrary.LinkedMem();
+	public void send() {
+		LinkAPILibrary.LinkedMem lm = new LinkAPILibrary.LinkedMem();
 
-        lm.identity = LinkAPIHelper.parseToCharBuffer(
-                LinkAPILibrary.MAX_IDENTITY_LENGTH, identity).array();
-        lm.context = LinkAPIHelper.parseToByteBuffer(
-                LinkAPILibrary.MAX_CONTEXT_LENGTH, context).array();
-        lm.context_len = context.length();
+		lm.identity = LinkAPIHelper.parseToCharBuffer(
+				LinkAPILibrary.MAX_IDENTITY_LENGTH, identity).array();
+		lm.context = LinkAPIHelper.parseToByteBuffer(
+				LinkAPILibrary.MAX_CONTEXT_LENGTH, context).array();
+		lm.context_len = context.length();
 
-        lm.name = LinkAPIHelper.parseToCharBuffer(
-                LinkAPILibrary.MAX_NAME_LENGTH, name).array();
-        lm.description = LinkAPIHelper.parseToCharBuffer(
-                LinkAPILibrary.MAX_DESCRIPTION_LENGTH, description).array();
+		lm.name = LinkAPIHelper.parseToCharBuffer(
+				LinkAPILibrary.MAX_NAME_LENGTH, name).array();
+		lm.description = LinkAPIHelper.parseToCharBuffer(
+				LinkAPILibrary.MAX_DESCRIPTION_LENGTH, description).array();
 
-        lm.uiTick = ++uiTick;
-        lm.uiVersion = MumbleInitializer.PLUGIN_UI_VERSION;
+		lm.uiTick = ++uiTick;
+		lm.uiVersion = MumbleInitializer.PLUGIN_UI_VERSION;
 
-        lm.fAvatarPosition = fAvatarPosition;
-        lm.fAvatarFront = fAvatarFront;
-        lm.fAvatarTop = fAvatarTop;
+		lm.fAvatarPosition = fAvatarPosition;
+		lm.fAvatarFront = fAvatarFront;
+		lm.fAvatarTop = fAvatarTop;
 
-        lm.fCameraPosition = fCameraPosition;
-        lm.fCameraFront = fCameraFront;
-        lm.fCameraTop = fCameraTop;
+		lm.fCameraPosition = fCameraPosition;
+		lm.fCameraFront = fCameraFront;
+		lm.fCameraTop = fCameraTop;
 
-        byte successMessage = mumbleLink.updateData(lm);
-        boolean success = (successMessage != 0);
+		byte successMessage = mumbleLink.updateData(lm);
+		boolean success = (successMessage != 0);
 
-        if (!success) {
-            errorHandler
-                    .handleError(NativeUpdateError.ERROR_NOT_YET_INITIALIZED);
-        }
+		if (!success) {
+			errorHandler
+					.handleError(NativeUpdateError.ERROR_NOT_YET_INITIALIZED);
+		}
 
-    }
+	}
 
-    public void set(Minecraft game) {
-        try {
-            // 1 unit = 1 meter
+	public void set(Minecraft game) {
+		try {
+			// 1 unit = 1 meter
 
-            // initialize multipliers
-            float fAvatarFrontX = 1;
-            float fAvatarFrontY = 1;
-            float fAvatarFrontZ = 1;
+			// initialize multipliers
+			float fAvatarFrontX = 1;
+			float fAvatarFrontY = 1;
+			float fAvatarFrontZ = 1;
 
-            float fCameraFrontX = 1;
-            float fCameraFrontY = 1;
-            float fCameraFrontZ = 1;
+			float fCameraFrontX = 1;
+			float fCameraFrontY = 1;
+			float fCameraFrontZ = 1;
 
-            float fAvatarTopX = 1;
-            float fAvatarTopY = 1; // Y points up
-            float fAvatarTopZ = 1;
+			float fAvatarTopX = 1;
+			float fAvatarTopY = 1; // Y points up
+			float fAvatarTopZ = 1;
 
-            float fCameraTopX = 1;
-            float fCameraTopY = 1; // Y points up
-            float fCameraTopZ = 1;
+			float fCameraTopX = 1;
+			float fCameraTopY = 1; // Y points up
+			float fCameraTopZ = 1;
 
-            Vec3 lookDirection = game.player.getLookAngle();
-            Vec3 topDirection = getTopVec(game);
+			Vec3 lookDirection = game.thePlayer.getLookVec();
+			Vec3 topDirection = getTopVec(game);
 
-            // Position of the avatar
-            fAvatarPosition = new float[]{
-                    (float) game.player.getPosition(1f).x(),
-                    (float) game.player.getPosition(1f).z(),
-                    (float) game.player.getPosition(1f).y()
-            };
+			/*
+			 * TODO: calculate real camera vector from pitch and yaw // camera
+			 * pitch in degrees (e.g. 0.0f to 360.0f) Float cameraPitch =
+			 * game.thePlayer.cameraPitch; // camera yaw in degrees (e.g. 0.0f
+			 * to 360.0f) Float cameraYaw = game.thePlayer.cameraYaw;
+			 */
 
-            // Unit vector pointing out of the avatar's eyes (here Front looks
-            // into scene).
-            fAvatarFront = new float[]{
-                    (float) lookDirection.x * fAvatarFrontX,
-                    (float) lookDirection.z * fAvatarFrontZ,
-                    (float) lookDirection.y * fAvatarFrontY
-            };
+			// Position of the avatar
+			fAvatarPosition = new float[] {
+					Float.parseFloat(Double.toString(game.thePlayer.posX)),
+					Float.parseFloat(Double.toString(game.thePlayer.posZ)),
+					Float.parseFloat(Double.toString(game.thePlayer.posY)) };
 
-            // Unit vector pointing out of the top of the avatar's head (here
-            // Top looks straight up).
-            fAvatarTop = new float[]{
-                    (float) topDirection.x * fAvatarTopX,
-                    (float) topDirection.z * fAvatarTopZ,
-                    (float) topDirection.y * fAvatarTopY
-            };
+			// Unit vector pointing out of the avatar's eyes (here Front looks
+			// into scene).
+			fAvatarFront = new float[] {
+					Float.parseFloat(Double.toString(lookDirection.xCoord
+							* fAvatarFrontX)),
+					Float.parseFloat(Double.toString(lookDirection.zCoord
+							* fAvatarFrontZ)),
+					Float.parseFloat(Double.toString(lookDirection.yCoord
+							* fAvatarFrontY)) };
 
-            // TODO: use real camera position, s.a.
-            fCameraPosition = new float[]{
-                    (float) game.player.getPosition(1f).x(),
-                    (float) game.player.getPosition(1f).z(),
-                    (float) game.player.getPosition(1f).y()
-            };
+			// Unit vector pointing out of the top of the avatar's head (here
+			// Top looks straight up).
+			fAvatarTop = new float[] {
+					Float.parseFloat(Double.toString(topDirection.xCoord
+							* fAvatarTopX)),
+					Float.parseFloat(Double.toString(topDirection.zCoord
+							* fAvatarTopZ)),
+					Float.parseFloat(Double.toString(topDirection.yCoord
+							* fAvatarTopY)) };
 
-            fCameraFront = new float[]{
-                    (float) lookDirection.x * fCameraFrontX,
-                    (float) lookDirection.z * fCameraFrontZ,
-                    (float) lookDirection.y * fCameraFrontY
-            };
+			// TODO: use real camera position, s.a.
+			fCameraPosition = new float[] {
+					Float.parseFloat(Double.toString(game.thePlayer.posX)),
+					Float.parseFloat(Double.toString(game.thePlayer.posZ)),
+					Float.parseFloat(Double.toString(game.thePlayer.posY)) };
 
-            fCameraTop = new float[]{
-                    (float) topDirection.x * fCameraTopX,
-                    (float) topDirection.z * fCameraTopZ,
-                    (float) topDirection.y * fCameraTopY
-            };
+			fCameraFront = new float[] {
+					Float.parseFloat(Double.toString(lookDirection.xCoord
+							* fCameraFrontX)),
+					Float.parseFloat(Double.toString(lookDirection.zCoord
+							* fCameraFrontZ)),
+					Float.parseFloat(Double.toString(lookDirection.yCoord
+							* fCameraFrontY)) };
 
-            // Identifier which uniquely identifies a certain player in a
-            // context (e.g. the ingame Name).
-            identity = generateIdentity(game,
-                    LinkAPILibrary.MAX_IDENTITY_LENGTH);
+			fCameraTop = new float[] {
+					Float.parseFloat(Double.toString(topDirection.xCoord
+							* fCameraTopX)),
+					Float.parseFloat(Double.toString(topDirection.zCoord
+							* fCameraTopZ)),
+					Float.parseFloat(Double.toString(topDirection.yCoord
+							* fCameraTopY)) };
 
-            // Context should be equal for players which should be able to hear
-            // each other positional and differ for those who shouldn't (e.g. it
-            // could contain the server+port and team)
-            context = generateContext(game, LinkAPILibrary.MAX_CONTEXT_LENGTH);
+			// Identifier which uniquely identifies a certain player in a
+			// context (e.g. the ingame Name).
+			identity = generateIdentity(game,
+					LinkAPILibrary.MAX_IDENTITY_LENGTH);
 
-        } catch (Exception ex) {
-            // we'll just ignore errors since they would become too spammy and
-            // we will retry anyways
-            // ModLoader.getLogger().log(Level.SEVERE, null, ex);
-        }
-    }
+			// Context should be equal for players which should be able to hear
+			// each other positional and differ for those who shouldn't (e.g. it
+			// could contain the server+port and team)
+			context = generateContext(game, LinkAPILibrary.MAX_CONTEXT_LENGTH);
 
-    protected String generateIdentity(Minecraft game, int maxLength) {
-        String displayName = game.player.getDisplayName().getString();
+		} catch (Exception ex) {
+			// we'll just ignore errors since they would become too spammy and
+			// we will retry anyways
+			// ModLoader.getLogger().log(Level.SEVERE, null, ex);		
+		}
+	}
 
-        try {
-            JSONObject newIdentity = new JSONObject();
-            newIdentity.put(IdentityManipulator.IdentityKey.NAME, displayName);
-            return newIdentity.toString();
-        } catch (JSONException e) {
-            MumbleLinkImpl.LOG.fatal("could not generate identity", e);
-        }
+	protected String generateIdentity(Minecraft game, int maxLength) {
+		try {
+			JSONObject newIdentity = new JSONObject();
+			newIdentity.put(IdentityKey.NAME, game.thePlayer.getEntityName());
+			return newIdentity.toString();
+		} catch (JSONException e) {
+			ModLoader.getLogger().log(Level.SEVERE,
+					"could not generate identity", e);
+		}
 
-        return displayName;
-    }
+		return game.thePlayer.getEntityName();
+	}
 
-    protected String generateContext(Minecraft game, int maxLength) {
-        // empty context because the plugin name is already always prepended anyways
-        return "";
-    }
+	protected String generateContext(Minecraft game, int maxLength) {
+		try {
+			JSONObject newContext = new JSONObject();
+			newContext.put(ContextKey.DOMAIN,
+					MumbleLinkConstants.MUMBLE_CONTEXT_DOMAIN_ALL_TALK);
+			return newContext.toString();
+		} catch (JSONException e) {
+			ModLoader.getLogger().log(Level.SEVERE,
+					"could not generate context", e);
+		}
 
-    private Vec3 getTopVec(Minecraft game) {
-        return game.player.getUpVector(1f);
-    }
+		return MumbleLinkConstants.MUMBLE_CONTEXT_DOMAIN_ALL_TALK;
+	}
+
+	private Vec3 getTopVec(Minecraft game) {
+		float f1 = MathHelper.cos(-game.thePlayer.rotationYaw * 0.017453292F
+				- (float) Math.PI);
+		float f2 = MathHelper.sin(-game.thePlayer.rotationYaw * 0.017453292F
+				- (float) Math.PI);
+		float f3 = -MathHelper
+				.cos((-game.thePlayer.rotationPitch + 90) * 0.017453292F);
+		float f4 = MathHelper
+				.sin((-game.thePlayer.rotationPitch + 90) * 0.017453292F);
+
+		return game.theWorld.getWorldVec3Pool().getVecFromPool(
+				(double) (f2 * f3), (double) f4, (double) (f1 * f3));
+	}
 }

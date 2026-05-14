@@ -22,184 +22,186 @@
 
 package zsawyer.mods.mumblelink.addons.pa.es;
 
-import net.minecraft.client.Minecraft;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraftforge.common.MinecraftForge;
-import net.minecraftforge.eventbus.api.EventPriority;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.*;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.fml.config.ModConfig;
-import net.minecraftforge.fml.event.lifecycle.InterModEnqueueEvent;
-import net.minecraftforge.fmllegacy.network.FMLNetworkConstants;
-import net.minecraftforge.forgespi.language.IModInfo;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import zsawyer.mods.mumblelink.api.Activateable;
-import zsawyer.mods.mumblelink.api.IdentityManipulator;
-import zsawyer.mods.mumblelink.api.MumbleLink;
-import zsawyer.mods.mumblelink.util.InstanceHelper;
-import zsawyer.mods.mumblelink.util.json.JSONArray;
-import zsawyer.mods.mumblelink.util.json.JSONException;
-import zsawyer.mods.mumblelink.util.json.JSONObject;
+/*
+ mod_MumbleLink - Positional Audio Communication for Minecraft with Mumble
+ Copyright 2011-2013 zsawyer (http://sourceforge.net/users/zsawyer)
 
-import javax.annotation.Nonnull;
-import javax.management.InstanceNotFoundException;
+ This file is part of mod_MumbleLink
+ (http://sourceforge.net/projects/modmumblelink/).
+
+ mod_MumbleLink is free software: you can redistribute it and/or modify
+ it under the terms of the GNU Lesser General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+
+ mod_MumbleLink is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU Lesser General Public License for more details.
+
+ You should have received a copy of the GNU Lesser General Public License
+ along with mod_MumbleLink.  If not, see <http://www.gnu.org/licenses/>.
+
+ */
+
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import net.minecraft.client.Minecraft;
+import zsawyer.mods.Activateable;
+import zsawyer.mods.mumblelink.MumbleLink;
+import zsawyer.mods.mumblelink.MumbleLinkConstants;
+import zsawyer.mods.mumblelink.addons.pa.es.ExtendedPASupportConstants.IdentityKey;
+import zsawyer.mods.mumblelink.json.JSONArray;
+import zsawyer.mods.mumblelink.json.JSONException;
+import zsawyer.mods.mumblelink.json.JSONObject;
+import zsawyer.mods.mumblelink.mumble.IdentityManipulator;
+import zsawyer.mods.mumblelink.util.ConfigHelper;
+import cpw.mods.fml.common.FMLCommonHandler;
+import cpw.mods.fml.common.Mod;
+import cpw.mods.fml.common.Mod.EventHandler;
+import cpw.mods.fml.common.Mod.Instance;
+import cpw.mods.fml.common.event.FMLInitializationEvent;
+import cpw.mods.fml.common.event.FMLPreInitializationEvent;
+import cpw.mods.fml.common.network.NetworkMod;
+import cpw.mods.fml.relauncher.Side;
+import cpw.mods.fml.relauncher.SideOnly;
 
 /**
  * An addon to the MumbleLink mod (forge version) which injects extended
  * positional audio support (i.e. identity) based on vanilla Minecraft.
- *
+ * 
  * @author zsawyer, 2013-07-05
- * @version 1.0.1
  */
-@Mod(ExtendedPASupport.MOD_ID)
-@Mod.EventBusSubscriber(value = Dist.CLIENT, bus = Mod.EventBusSubscriber.Bus.FORGE)
-@OnlyIn(Dist.CLIENT)
+@Mod(modid = ExtendedPASupportConstants.MOD_ID,
+		name = ExtendedPASupportConstants.MOD_NAME,
+		version = ExtendedPASupportConstants.MOD_VERSION,
+		dependencies = "required-after:" + MumbleLinkConstants.MOD_ID)
+@NetworkMod(clientSideRequired = true, serverSideRequired = false)
+@SideOnly(Side.CLIENT)
 public class ExtendedPASupport implements Activateable, IdentityManipulator {
-    public static Logger LOG = LogManager.getLogger();
+	public static Logger LOG;
 
-    public static final @Nonnull
-    String MOD_ID = "extendedpasupport";
-    public final static @Nonnull
-    String MOD_NAME = "ExtendedPASupport for MumbleLink";
-    public final static @Nonnull
-    String VERSION = "1.1.0";
-    public final static @Nonnull
-    String MOD_DEPENDENCIES = "required-after:" + MumbleLink.MOD_ID;
+	// The instance of the mod that Forge uses.
+	@Instance(ExtendedPASupportConstants.MOD_ID)
+	public static ExtendedPASupport instance;
 
-    // whether this mod is active
-    private boolean enabled = true;
-    // whether debugging mode is on
-    private boolean debug = false;
+	// whether this mod is active
+	private boolean enabled = true;
+	// whether debugging mode is on
+	private boolean debug = false;
 
-    private String name = "ExtendedPASupport for MumbleLink";
-    private String version = "unknown";
-    private MumbleLink mumbleLinkInstance;
+	@EventHandler
+	public void preInit(FMLPreInitializationEvent event) {
+		// initialize logger
+		LOG = event.getModLog();
 
-    public ExtendedPASupport() {
-        MinecraftForge.EVENT_BUS.register(this);
-        this.preInit();
-    }
+		// save guard because this mod should only run on the client
+		if (FMLCommonHandler.instance().getSide().isServer())
+			throw new RuntimeException(ExtendedPASupportConstants.MOD_NAME
+					+ " should not be installed on a server!");
 
-    @OnlyIn(Dist.CLIENT)
-    @SubscribeEvent(priority = EventPriority.LOWEST)
-    public void setup(InterModEnqueueEvent event) {
-        LOG.debug("setup started");
-        try {
-            if (enabled) {
-                load();
-                LOG.info("loaded and active");
-            }
-        } catch (Throwable t) {
-            String s = "Error in mod during setup " + getName();
-            ModContainer modContainer = ModList.get().getModContainerById(MOD_ID).orElseThrow(() -> new RuntimeException(s, t));
-            throw new ModLoadingException(modContainer.getModInfo(), modContainer.getCurrentState(), s, t);
-        }
-        LOG.debug("setup finished");
-    }
+		loadConfig(event);
 
-    public void preInit() {
-        ModLoadingContext context = ModLoadingContext.get();
-        context.registerExtensionPoint(IExtensionPoint.DisplayTest.class
-                , () -> new IExtensionPoint.DisplayTest(
-                        () -> FMLNetworkConstants.IGNORESERVERONLY,
-                        (serverVer, isDedicated) -> true));
-        IModInfo modInfo = ModLoadingContext.get().getActiveContainer().getModInfo();
-        name = modInfo.getDisplayName();
-        version = modInfo.getVersion().getQualifier();
-        loadConfig();
-    }
+		if (!debug) {
+			// step up log level to only severe and higher messages
+			LOG.setLevel(Level.SEVERE);
+		}
+	}
 
-    private void loadConfig() {
-        ModLoadingContext.get().registerConfig(ModConfig.Type.CLIENT, Config.SPEC);
-        // TODO: make this actually read from config
-        debug = false;//Config.CONFIG.debug.get();
-        enabled = true;//Config.CONFIG.enabled.get();
-    }
+	/**
+	 * load the configuration from the config file
+	 * 
+	 * @param event
+	 *            the event from which to get the configuration from
+	 */
+	private void loadConfig(FMLPreInitializationEvent event) {
+		ConfigHelper configHelper = new ConfigHelper(event);
 
-    public void load() throws InstanceNotFoundException {
-        mumbleLinkInstance = InstanceHelper.getMumbleLink();
+		// load the debug variable from config file
+		debug = configHelper.loadDebug(debug);
+		// load the enabled variable from config file
+		enabled = configHelper.loadEnabled(enabled);
+	}
 
-        if (enabled && mumbleLinkInstance != null) {
-            activate();
-        }
-    }
+	@SideOnly(Side.CLIENT)
+	@EventHandler
+	public void load(FMLInitializationEvent event) {
+		if (enabled) {
+			activate();
+		}
+	}
 
-    @Override
-    public void activate() {
-        mumbleLinkInstance.getApi().register(this);
-    }
+	@Override
+	public void activate() {
+		MumbleLink.instance.getApi().register((IdentityManipulator) this);
+	}
 
-    @Override
-    public void deactivate() {
-        mumbleLinkInstance.getApi().unregister(this);
-    }
+	@Override
+	public void deactivate() {
+		MumbleLink.instance.getApi().unregister((IdentityManipulator) this);
+	}
 
-    @Override
-    public String manipulateIdentity(String identity, Minecraft game,
-                                     int maxLength) {
+	@Override
+	public String manipulateIdentity(String identity, Minecraft game,
+			int maxLength) {
 
-        try {
-            // presume the previous identity is a JSON-Object
-            JSONObject newIdentity = new JSONObject(identity);
-            // inject our information
-            appendToIdentity(newIdentity, game);
-            // print the (intermediate) result for debugging
-            printDebug(newIdentity, "identity");
+		try {
+			// presume the previous identity is a JSON-Object
+			JSONObject newIdentity = new JSONObject(identity);
+			// inject our information
+			appendToIdentity(newIdentity, game);
+			// print the (intermediate) result for debugging
+			printDebug(newIdentity, "identity");
 
-            return newIdentity.toString();
-        } catch (JSONException e) {
-            // no JSON... this is not going to work...
-            LOG.fatal("could not generate identity", e);
-            return identity;
-        }
-    }
+			return newIdentity.toString();
+		} catch (JSONException e) {
+			// no JSON... this is not going to work...
+			LOG.log(Level.SEVERE, "could not generate identity", e);
+			return identity;
+		}
+	}
 
-    /**
-     * append our information to the given identity
-     *
-     * @param identity the identity to be supplement
-     * @param game     the game instance from which to retrieve the information
-     * @throws JSONException see {@link JSONObject#put(String, Object)}
-     */
-    private void appendToIdentity(JSONObject identity, Minecraft game)
-            throws JSONException {
-        // build spawn location coordinates (sadly this is the only somewhat
-        // identifiable information the client has about the world (and server)
-        // it connects to.
-        // TODO: test if we can use game.world.getSeed()
-        JSONArray spawnCoordinates = new JSONArray();
-        spawnCoordinates.put(game.level.getSharedSpawnPos().getX());
-        spawnCoordinates.put(game.level.getSharedSpawnPos().getX());
-        spawnCoordinates.put(game.level.getSharedSpawnPos().getX());
-        // append coordinates
-        identity.put(IdentityKey.WORLD_SPAWN, spawnCoordinates);
+	/**
+	 * append our information to the given identity
+	 * 
+	 * @param identity
+	 *            the identity to be supplement
+	 * @param game
+	 *            the game instance from which to retrieve the information
+	 * @throws JSONException
+	 *             see {@link JSONObject#put(String, Object)}
+	 */
+	private void appendToIdentity(JSONObject identity, Minecraft game)
+			throws JSONException {
+		// build spawn location coordinates (sadly this is the only somewhat
+		// identifiable information the client has about the world (and server)
+		// it connects to.
+		JSONArray spawnCoordinates = new JSONArray();
+		spawnCoordinates.put(game.theWorld.getWorldInfo().getSpawnX());
+		spawnCoordinates.put(game.theWorld.getWorldInfo().getSpawnY());
+		spawnCoordinates.put(game.theWorld.getWorldInfo().getSpawnZ());
+		// append coordinates
+		identity.put(IdentityKey.WORLD_SPAWN, spawnCoordinates);
 
-        // append the dimension
-        identity.put(IdentityKey.DIMENSION, game.player.level.dimension());
-    }
+		// append the dimension
+		identity.put(IdentityKey.DIMENSION, game.thePlayer.dimension);
+	}
 
-    /**
-     * short-hand method to print a JSON object in the log
-     *
-     * @param objectToPrint the object to print to the log
-     * @param nameOfObject  the name to show (which identifies the object in the context
-     *                      of the log)
-     */
-    private void printDebug(JSONObject objectToPrint, String nameOfObject) {
-        if (debug) {
-            ExtendedPASupport.LOG.info(nameOfObject + ": "
-                    + objectToPrint.toString(), "");
-        }
-    }
+	/**
+	 * short-hand method to print a JSON object in the log
+	 * 
+	 * @param objectToPrint
+	 *            the object to print to the log
+	 * @param nameOfObject
+	 *            the name to show (which identifies the object in the context
+	 *            of the log)
+	 */
+	private void printDebug(JSONObject objectToPrint, String nameOfObject) {
+		if (debug) {
+			ExtendedPASupport.LOG.log(Level.INFO, nameOfObject + ": "
+					+ objectToPrint.toString());
+		}
+	}
 
-    public String getName() {
-        return name;
-    }
-
-    public String getVersion() {
-        return version;
-    }
 }
