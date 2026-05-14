@@ -42,20 +42,28 @@ public class MinecraftProxy {
 	/**
 	 * Gets the current player, handling different field names across versions
 	 * 
-	 * @return the current player, or null if not found
+	 * @return the current player, or null if not found or field access fails
 	 */
 	public EntityPlayer getPlayer() {
-		return (EntityPlayer) ReflectionHelper.getField(minecraft, "thePlayer",
+		Object playerObj = ReflectionHelper.getField(minecraft, "thePlayer",
 				"player");
+		if (playerObj instanceof EntityPlayer) {
+			return (EntityPlayer) playerObj;
+		}
+		return null;
 	}
 
 	/**
 	 * Gets the current world, handling different field names across versions
 	 * 
-	 * @return the current world, or null if not found
+	 * @return the current world, or null if not found or field access fails
 	 */
 	public World getWorld() {
-		return (World) ReflectionHelper.getField(minecraft, "theWorld", "world");
+		Object worldObj = ReflectionHelper.getField(minecraft, "theWorld", "world");
+		if (worldObj instanceof World) {
+			return (World) worldObj;
+		}
+		return null;
 	}
 
 	/**

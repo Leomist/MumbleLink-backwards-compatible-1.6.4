@@ -36,7 +36,8 @@ public class ReflectionHelper {
 	 * 
 	 * @param obj the object to get the field from
 	 * @param fieldNames the field names to try, in order of preference
-	 * @return the field value, or null if not found
+	 * @return the field value if found and accessible, or null if the object is null,
+	 *         no matching field exists, or the field cannot be accessed
 	 */
 	public static Object getField(Object obj, String... fieldNames) {
 		if (obj == null) {
